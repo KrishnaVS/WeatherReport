@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Weather Reports</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            margin-top: 20px;
+        }
+        .weather-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .weather-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 300px;
+        }
+        .icon {
+            width: 50px;
+        }
+        .hourly-forecast {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Live Weather Reports</h1>
+    <div class="weather-container">
+        <div class="weather-box" id="weather1">Loading...</div>
+        <div class="weather-box" id="weather2">Loading...</div>
+    </div>
+    <script>
+        const apiKey = 'de667b7badc02e1fbb6282b62845920c';
+        const locations = [
+            { name: "Gobichettipalayam", lat: 11.4553, lon: 77.4422 },
+            { name: "Vellankovil", lat: 11.1085, lon: 77.5901 }
+        ];
+
+        async function fetchWeather(city, lat, lon, elementId) {
+            const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const current = data.list[0];
+                const iconUrl = `https://openweathermap.org/img/wn/${current.weather[0].icon}@2x.png`;
+                
+                let hourlyHtml = '<h4>Hourly Forecast:</h4>';
+                for (let i = 0; i < 5; i++) {
+                    let hour = data.list[i];
+                    let time = new Date(hour.dt_txt).getHours();
+                    hourlyHtml += `<p>${time}:00 - ${hour.main.temp}°C 🌧️ ${hour.pop * 100}%</p>`;
+                }
+                
+                document.getElementById(elementId).innerHTML = `
+                    <h3>${city}</h3>
+                    <img class='icon' src="${iconUrl}" alt="Weather icon">
+                    <p>Temp: ${current.main.temp}°C</p>
+                    <p>Humidity: ${current.main.humidity}%</p>
+                    <p>Chance of Rain: ${current.pop * 100}%</p>
+                    <div class="hourly-forecast">${hourlyHtml}</div>
+                `;
+            } catch (error) {
+                console.error("Error fetching weather:", error);
+            }
+        }
+
+        locations.forEach((loc, index) => {
+            fetchWeather(loc.name, loc.lat, loc.lon, `weather${index + 1}`);
+        });
+    </script>
+</body>
+</html>
