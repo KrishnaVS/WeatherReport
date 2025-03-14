@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Weather App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            animation: backgroundAnimation 5s infinite alternate;
+        }
+        @keyframes backgroundAnimation {
+            from { background: linear-gradient(to right, #4facfe, #00f2fe); }
+            to { background: linear-gradient(to right, #00f2fe, #4facfe); }
+        }
+        .container {
+            max-width: 400px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s;
+        }
+        .container:hover {
+            transform: scale(1.05);
+        }
+        h1 { font-size: 28px; }
+        .weather-icon {
+            font-size: 50px;
+            margin: 10px;
+        }
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 1s forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        #date-time {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .weather-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🌤 Live Weather App</h1>
+    <div id="date-time"></div>
+    <div id="weather-container" class="weather-container"></div>
+
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById("date-time").innerText = now.toLocaleString();
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        const apiKey = "de667b7badc02e1fbb6282b62845920c";
+        const locations = [
+            { name: "Gobichettipalayam", query: "Gobichettipalayam" },
+            { name: "Vellankovil, Gobichettipalayam", query: "Vellankovil,Gobichettipalayam" },
+            { name: "Athani, Gobichettipalayam", query: "Athani,Gobichettipalayam" }
+        ];
+
+        async function fetchWeather(location) {
+            const url = `https://api.openweathermap.org/data/2.5/forecast?q=${location.query}&units=metric&appid=${apiKey}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.cod !== "200") throw new Error("Invalid API response");
+                displayWeather(location.name, data);
+            } catch (error) {
+                console.error("Failed to fetch weather data", error);
+            }
+        }
+
+        function displayWeather(city, data) {
+            const temp = data.list[0].main.temp;
+            const humidity = data.list[0].main.humidity;
+            const windSpeed = data.list[0].wind.speed;
+            const weatherCondition = data.list[0].weather[0].main;
+            const rainInfo = getRainForecast(data.list);
+            const rainChance = (data.list[0].pop || 0) * 100;
+
+            const iconMap = {
+                "Clear": "fa-sun",
+                "Clouds": "fa-cloud",
+                "Rain": "fa-cloud-showers-heavy",
+                "Drizzle": "fa-cloud-rain",
+                "Thunderstorm": "fa-bolt",
+                "Snow": "fa-snowflake",
+                "Mist": "fa-smog"
+            };
+
+            const weatherContainer = document.getElementById("weather-container");
+
+            // Create a weather box for each location
+            const weatherBox = document.createElement("div");
+            weatherBox.className = "container fade-in";
+            weatherBox.innerHTML = `
+                <h2>${city}</h2>
+                <i class="fas ${iconMap[weatherCondition] || "fa-cloud"}"></i>
+                <h3>${temp}°C</h3>
+                <p>Humidity: ${humidity}%</p>
+                <p>Wind Speed: ${windSpeed} m/s</p>
+                <h3>Today's Rain Chance: ${rainChance.toFixed(0)}%</h3>
+                <h3>Hourly Forecast</h3>
+                <div>${getHourlyForecast(data.list)}</div>
+                <h3>Rain Forecast</h3>
+                <p>${rainInfo}</p>
+            `;
+            weatherContainer.appendChild(weatherBox);
+        }
+
+        function getHourlyForecast(list) {
+            let forecastHTML = "";
+            for (let i = 0; i < 5; i++) {
+                const hourData = list[i];
+                const time = new Date(hourData.dt * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const temp = hourData.main.temp;
+                const condition = hourData.weather[0].main;
+                forecastHTML += `<p><strong>${time}</strong>: ${temp}°C - ${condition}</p>`;
+            }
+            return forecastHTML;
+        }
+
+        function getRainForecast(list) {
+            for (let i = 0; i < list.length; i++) {
+                if (list[i].weather[0].main === "Rain") {
+                    const date = new Date(list[i].dt * 1000).toLocaleDateString();
+                    return `Chance of rain detected. Expected rain on: ${date}`;
+                }
+            }
+            return "No rain expected in the next few days.";
+        }
+
+        function refreshWeather() {
+            document.getElementById("weather-container").innerHTML = ""; // Clear previous data
+            locations.forEach(fetchWeather);
+        }
+
+        setInterval(refreshWeather, 1800000); // Refresh every 30 minutes
+        refreshWeather();
+    </script>
+
+</body>
+</html>
